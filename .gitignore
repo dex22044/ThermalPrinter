@@ -1,0 +1,11 @@
+*.o
+*.d
+*.lst
+*.bin
+*.elf
+*.hex
+*.map
+ThermalPrinterDriver/build
+ThermalPrinterDriver/test_images
+ThermalPrinterESP32/.pio
+ThermalPrinterSTM32/build

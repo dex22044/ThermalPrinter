@@ -16,8 +16,6 @@ uint8_t* currImageBuffer;
 const int imageBufferRowLimit = 1024;
 const int imageBufferSizeLimit = imageBufferRowLimit * 54;
 int currentImageBufferSize = 0;
-// const int rowsInUdpPacket = 4;
-// uint8_t imageAvailBuffer[imageBufferRowLimit] = {0};
 
 bool modeAP = false;
 char wifiSSID[32] = "le printer";
@@ -170,7 +168,6 @@ void processPacket() {
 
     if(pktIn[0] == 0x07) { // Autoprinting
         if(pktIn[1] == 0x01) { // Clear buffer
-            // for(int i = 0; i < imageBufferRowLimit; i++) imageAvailBuffer[i] = 0;
             currentImageBufferSize = 0;
             pktOut[0] = 0x77;
             pktOut[1] = 0x01;
@@ -182,7 +179,6 @@ void processPacket() {
                 memcpy(&currImageBuffer[currentImageBufferSize * 54], &pktIn[2], 54);
                 currentImageBufferSize++;
             }
-            // while(currentImageBufferSize < imageBufferRowLimit && imageAvailBuffer[currentImageBufferSize]) currentImageBufferSize++;
             pktOut[0] = 0x77;
             pktOut[1] = 0x02;
             return;

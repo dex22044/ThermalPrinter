@@ -39,6 +39,7 @@ public:
 
     void ping();
     void setParamUInt16(uint8_t param, uint16_t value);
+    void setRowBurnTimeBit(uint8_t bit, uint16_t value);
     void setEnableMotor(bool enable);
     void skipLines(bool direction, uint16_t lines);
 

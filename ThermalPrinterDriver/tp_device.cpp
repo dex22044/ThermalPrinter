@@ -114,7 +114,7 @@ int TP_Device::receivePacket(uint8_t* pkt) {
 void TP_Device::waitForReply(int cmdId) {
     uint8_t pkt[64];
     int iters = 0;
-    while(iters < 5000) {
+    while(iters < 20000) {
         pollInput();
         iters++;
         if(receivePacket(pkt) == 0) {
@@ -139,6 +139,17 @@ void TP_Device::setParamUInt16(uint8_t param, uint16_t value) {
     pkt[1] = param;
     pkt[2] = (value >> 8);
     pkt[3] = (value & 0xFF);
+    sendPacket(pkt);
+    waitForReply(0x72);
+}
+
+void TP_Device::setRowBurnTimeBit(uint8_t bit, uint16_t value) {
+    uint8_t pkt[64];
+    pkt[0] = 0x02;
+    pkt[1] = 0x03;
+    pkt[2] = bit;
+    pkt[3] = (value >> 8);
+    pkt[4] = (value & 0xFF);
     sendPacket(pkt);
     waitForReply(0x72);
 }

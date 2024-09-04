@@ -13,10 +13,18 @@ char chipIDHex[9] = "";
 TaskHandle_t printTask;
 
 uint8_t* currImageBuffer;
-const int imageBufferRowLimit = 1024;
+const int imageBufferRowLimit = 1536;
 const int imageBufferSizeLimit = imageBufferRowLimit * 54;
 int currentImageBufferSize = 0;
 int printModeBpp = 1;
+
+uint16_t minimalRowDelay = 0;
+uint16_t motorStepDelay = 1700;
+// uint16_t rowBurnTime = 400;
+uint16_t rowBurnTimes[8];
+uint8_t pktIn[64], pktOut[64];
+uint8_t lineData[54];
+uint8_t lineDataGray[432];
 
 bool modeAP = false;
 char wifiSSID[32] = "le printer";
@@ -74,13 +82,6 @@ void setup() {
     Logger::logMsg(1, "Done");
 }
 
-uint16_t minimalRowDelay = 300;
-uint16_t motorStepDelay = 1700;
-uint16_t rowBurnTime = 400;
-uint8_t pktIn[64], pktOut[64];
-uint8_t lineData[54];
-uint8_t lineDataGray[432];
-
 void processPacket() {
     if(pktIn[0] == 0x01) { // Ping
         pktOut[0] = 0x71;
@@ -102,7 +103,8 @@ void processPacket() {
             return;
         }
         if(pktIn[1] == 0x03) { // Row burn time
-            rowBurnTime = ((uint16_t)pktIn[2] << 8) | pktIn[3];
+            uint8_t idx = pktIn[2];
+            rowBurnTimes[idx] = ((uint16_t)pktIn[3] << 8) | pktIn[4];
             pktOut[0] = 0x72;
             pktOut[1] = 0x03;
             return;
@@ -132,10 +134,11 @@ void processPacket() {
             return;
         }
         if(pktIn[1] == 0x03) { // Row burn time
+            uint8_t idx = pktIn[2];
             pktOut[0] = 0x73;
             pktOut[1] = 0x03;
-            pktOut[2] = (rowBurnTime >> 8);
-            pktOut[3] = (rowBurnTime & 0xFF);
+            pktOut[2] = (rowBurnTimes[idx] >> 8);
+            pktOut[3] = (rowBurnTimes[idx] & 0xFF);
             return;
         }
         if(pktIn[1] == 0x03) { // Bits per pixel
@@ -151,7 +154,7 @@ void processPacket() {
     if(pktIn[0] == 0x04) { // Print line
         uint8_t enableStep = pktIn[1];
         memcpy(lineData, &pktIn[2], 54);
-        Peripherals::printerBurnNahuyLine(lineData, rowBurnTime);
+        Peripherals::printerBurnNahuyLine(lineData, rowBurnTimes[0]);
         // Logger::logMsg(0, "Print line");
         if(enableStep) Peripherals::motorStep();
         delayMicroseconds(minimalRowDelay);
@@ -211,14 +214,7 @@ void printImageFromBuffer() {
     Peripherals::motorSetDirection(0);
     for(int row = 0; row < currentImageBufferSize / printModeBpp; row++) {
         memcpy(lineData, &currImageBuffer[row * 54 * printModeBpp], 54 * printModeBpp);
-        memset(lineDataGray, 0, sizeof(lineDataGray));
-        for(int i = 0; i < 432; i++) {
-            for(int j = 0; j < printModeBpp; j++) {
-                int idx = i * printModeBpp + j;
-                if((lineData[idx >> 3] >> (idx & 7)) & 1) lineDataGray[i] |= 1 << j;
-            }
-        }
-        Peripherals::printerBurnNahuyLineGrayscale(lineDataGray, rowBurnTime, printModeBpp);
+        Peripherals::printerBurnNahuyLineGrayscale(lineData, rowBurnTimes, printModeBpp);
         Peripherals::motorStep();
         delayMicroseconds(minimalRowDelay);
     }

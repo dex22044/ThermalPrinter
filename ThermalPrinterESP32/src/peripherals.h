@@ -30,5 +30,5 @@ public:
     static void motorReset();
 
     static void printerBurnNahuyLine(uint8_t lineData[54], uint16_t burnTime);
-    static void printerBurnNahuyLineGrayscale(uint8_t lineData[432], uint16_t burnTime, uint8_t bpp);
+    static void printerBurnNahuyLineGrayscale(uint8_t* lineData, uint16_t burnTimes[8], uint8_t bpp);
 };

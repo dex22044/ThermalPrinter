@@ -105,13 +105,13 @@ void Peripherals::printerBurnNahuyLine(uint8_t lineData[54], uint16_t burnTime) 
     if(PRNT_STB6 != -1) digitalWrite(PRNT_STB6, 1);
 }
 
-void Peripherals::printerBurnNahuyLineGrayscale(uint8_t lineData[432], uint16_t burnTime, uint8_t bpp) {
+void Peripherals::printerBurnNahuyLineGrayscale(uint8_t* lineData, uint16_t burnTimes[8], uint8_t bpp) {
     uint8_t outData[54];
-    uint16_t currBurnTime = burnTime;
     for(int b = 0; b < bpp; b++) {
         memset(outData, 0, sizeof(outData));
         for(int i = 0; i < 432; i++) {
-            if((lineData[i] >> b) & 1) outData[i >> 3] |= 1 << (i & 7);
+            int cidx = i * bpp + b;
+            if((lineData[cidx >> 3] >> (cidx & 7)) & 1) outData[i >> 3] |= 1 << (i & 7);
         }
         for(int i = 0; i < 54; i++) {
             uint8_t cval = outData[i];
@@ -132,22 +132,22 @@ void Peripherals::printerBurnNahuyLineGrayscale(uint8_t lineData[432], uint16_t 
 
         digitalWrite(PRNT_STB1, 0);
         if(PRNT_STB4 != -1) digitalWrite(PRNT_STB4, 0);
-        delayMicroseconds(currBurnTime);
+        delayMicroseconds(burnTimes[b]);
         digitalWrite(PRNT_STB1, 1);
         if(PRNT_STB4 != -1) digitalWrite(PRNT_STB4, 1);
+        delayMicroseconds(100);
 
         digitalWrite(PRNT_STB2, 0);
         if(PRNT_STB5 != -1) digitalWrite(PRNT_STB5, 0);
-        delayMicroseconds(currBurnTime);
+        delayMicroseconds(burnTimes[b]);
         digitalWrite(PRNT_STB2, 1);
         if(PRNT_STB5 != -1) digitalWrite(PRNT_STB5, 1);
+        delayMicroseconds(100);
 
         digitalWrite(PRNT_STB3, 0);
         if(PRNT_STB6 != -1) digitalWrite(PRNT_STB6, 0);
-        delayMicroseconds(currBurnTime);
+        delayMicroseconds(burnTimes[b]);
         digitalWrite(PRNT_STB3, 1);
         if(PRNT_STB6 != -1) digitalWrite(PRNT_STB6, 1);
-
-        currBurnTime *= 3;
     }
 }

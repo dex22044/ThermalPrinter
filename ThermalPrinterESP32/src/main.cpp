@@ -16,6 +16,7 @@ uint8_t* currImageBuffer;
 const int imageBufferRowLimit = 1024;
 const int imageBufferSizeLimit = imageBufferRowLimit * 54;
 int currentImageBufferSize = 0;
+int printModeBpp = 1;
 
 bool modeAP = false;
 char wifiSSID[32] = "le printer";
@@ -78,6 +79,7 @@ uint16_t motorStepDelay = 1700;
 uint16_t rowBurnTime = 400;
 uint8_t pktIn[64], pktOut[64];
 uint8_t lineData[54];
+uint8_t lineDataGray[432];
 
 void processPacket() {
     if(pktIn[0] == 0x01) { // Ping
@@ -105,6 +107,12 @@ void processPacket() {
             pktOut[1] = 0x03;
             return;
         }
+        if(pktIn[1] == 0x04) { // Bits per pixel
+            printModeBpp = ((uint16_t)pktIn[2] << 8) | pktIn[3];
+            pktOut[0] = 0x72;
+            pktOut[1] = 0x04;
+            return;
+        }
         return;
     }
 
@@ -128,6 +136,13 @@ void processPacket() {
             pktOut[1] = 0x03;
             pktOut[2] = (rowBurnTime >> 8);
             pktOut[3] = (rowBurnTime & 0xFF);
+            return;
+        }
+        if(pktIn[1] == 0x03) { // Bits per pixel
+            pktOut[0] = 0x73;
+            pktOut[1] = 0x03;
+            pktOut[2] = (printModeBpp >> 8);
+            pktOut[3] = (printModeBpp & 0xFF);
             return;
         }
         return;
@@ -194,9 +209,16 @@ void processPacket() {
 
 void printImageFromBuffer() {
     Peripherals::motorSetDirection(0);
-    for(int row = 0; row < currentImageBufferSize; row++) {
-        memcpy(lineData, &currImageBuffer[row * 54], 54);
-        Peripherals::printerBurnNahuyLine(lineData, rowBurnTime);
+    for(int row = 0; row < currentImageBufferSize / printModeBpp; row++) {
+        memcpy(lineData, &currImageBuffer[row * 54 * printModeBpp], 54 * printModeBpp);
+        memset(lineDataGray, 0, sizeof(lineDataGray));
+        for(int i = 0; i < 432; i++) {
+            for(int j = 0; j < printModeBpp; j++) {
+                int idx = i * printModeBpp + j;
+                if((lineData[idx >> 3] >> (idx & 7)) & 1) lineDataGray[i] |= 1 << j;
+            }
+        }
+        Peripherals::printerBurnNahuyLineGrayscale(lineDataGray, rowBurnTime, printModeBpp);
         Peripherals::motorStep();
         delayMicroseconds(minimalRowDelay);
     }

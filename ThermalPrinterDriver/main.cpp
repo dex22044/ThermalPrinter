@@ -16,13 +16,15 @@ int main(int argc, char** argv) {
     dev->ping();
     dev->setParamUInt16(0x01, 0);
     dev->setParamUInt16(0x02, 1700);
-    dev->setParamUInt16(0x03, 600);
+    dev->setParamUInt16(0x03, 1600);
+    dev->setParamUInt16(0x04, 2);
     dev->setEnableMotor(true);
     dev->skipLines(1, 120);
     dev->setEnableMotor(false);
     TP_Image img;
-    if(img.loadMonochromeFromFile(argv[1]) == 0) {
-        dev->uploadImage(img.data, img.height, true);
+    if(img.loadMonochromeFromFile(argv[1], 2) == 0) {
+        dev->uploadImage(img.data, img.height * 2, true);
+        Logger::logInfo("Uploaded image");
         dev->setEnableMotor(true);
         dev->printBuffer();
         dev->skipLines(0, 200);

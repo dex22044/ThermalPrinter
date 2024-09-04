@@ -192,7 +192,6 @@ void TP_Device::printImage(uint8_t* img, int height) {
         usleep(500);
         txLines++;
     }
-    skipLines(0, 50);
     usleep(10000);
     setEnableMotor(false);
 }
@@ -214,7 +213,7 @@ void TP_Device::uploadImage(uint8_t* img, int height, bool clearBuffer) {
             if(inputPkt[0] == 0x77) rxLines++;
         }
         if(txLines - rxLines > maximumBufferedLines) {
-            cntWait++; 
+            cntWait++;
             if(cntWait > 10000) {
                 Logger::logError("Failed to upload image (didn't receive reply too long, rx:%d tx:%d)", rxLines, txLines);
                 return;

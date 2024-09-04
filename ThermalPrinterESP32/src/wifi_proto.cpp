@@ -11,13 +11,26 @@ void TCPPrintServer::startServer() {
     Logger::fatalAssert(bind(serverSock, (sockaddr*)&bindAddr, sizeof(sockaddr_in)) == 0, "bind failed");
     Logger::fatalAssert(listen(serverSock, 100000) == 0, "listen failed");
 
+    udpSock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    Logger::fatalAssert(udpSock >= 0, "udpsock create failed");
+    bindAddr.sin_family = AF_INET;
+    bindAddr.sin_addr.s_addr = INADDR_ANY;
+    bindAddr.sin_port = htons(9000);
+    Logger::fatalAssert(bind(udpSock, (sockaddr*)&bindAddr, sizeof(sockaddr_in)) == 0, "udp bind failed");
+
     int flags = fcntl(serverSock, F_GETFL, 0);
     Logger::fatalAssert(flags != -1, "fcntl get failed");
     flags = flags | O_NONBLOCK;
     Logger::fatalAssert(fcntl(serverSock, F_SETFL, flags) == 0, "fcntl set nonblock failed");
 
-    recvBuf = (uint8_t*)malloc(4096);
-    sendBuf = (uint8_t*)malloc(4096);
+    timeval tv;
+    tv.tv_sec = 0;
+    tv.tv_usec = 1;
+    int nodelay = 1;
+    Logger::fatalAssert(setsockopt(udpSock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv)) == 0, "set udpsock read timeout failed");
+
+    recvBuf = (uint8_t*)malloc(32768);
+    // sendBuf = (uint8_t*)malloc(4096);
     queueData = (uint8_t*)malloc(queueSizeA + 1);
     // txQueueData = (uint8_t*)malloc(queueSizeA + 1);
 
@@ -41,12 +54,19 @@ void TCPPrintServer::pollPackets() {
     if(remoteSock == -1) return;
     int rd = recv(remoteSock, recvBuf, sizeof(recvBuf), 0);
     for(int i = 0; i < rd; i++) queueData[(queueWritePtr++) & queueSizeA] = recvBuf[i];
+
     // int txLen = txQueueAvailable();
     // if(txLen == 0) return;
     // if(txLen > 4096) txLen = 4096;
     // for(int i = 0; i < txLen; i++) sendBuf[i] = txQueueData[(txQueueReadPtr++) & queueSizeA];
     // send(remoteSock, sendBuf, txLen, 0);
 }
+
+// void TCPPrintServer::pollUDP(uint8_t* lineData, uint8_t* lineAvailData) {
+//     if(udpSock == -1) return;
+//     int rd = recvfrom(udpSock, recvBuf, sizeof(recvBuf), 0, nullptr, nullptr);
+//     uint16_t startAddr = (uint16_t)recvBuf[0] << 8 | recvBuf[1];
+// }
 
 uint16_t TCPPrintServer::queueAvailable() {
     return queueWritePtr - queueReadPtr;

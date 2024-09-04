@@ -15,8 +15,11 @@ int main(int argc, char** argv) {
     dev->openTCP("192.168.1.211", 9000);
     dev->ping();
     dev->setParamUInt16(0x01, 0);
-    dev->setParamUInt16(0x02, 1800);
-    dev->setParamUInt16(0x03, 1500);
+    dev->setParamUInt16(0x02, 1700);
+    dev->setParamUInt16(0x03, 600);
+    dev->setEnableMotor(true);
+    dev->skipLines(1, 120);
+    dev->setEnableMotor(false);
     TP_Image img;
     if(img.loadMonochromeFromFile(argv[1]) == 0) {
         dev->uploadImage(img.data, img.height, true);

@@ -10,18 +10,20 @@ TCPPrintServer srv;
 
 uint32_t chipId = 0;
 char chipIDHex[9] = "";
-TaskHandle_t tcpTask;
+TaskHandle_t printTask;
 
 uint8_t* currImageBuffer;
 const int imageBufferRowLimit = 1024;
 const int imageBufferSizeLimit = imageBufferRowLimit * 54;
 int currentImageBufferSize = 0;
+// const int rowsInUdpPacket = 4;
+// uint8_t imageAvailBuffer[imageBufferRowLimit] = {0};
 
 bool modeAP = false;
 char wifiSSID[32] = "le printer";
 char wifiPASS[32] = "ecbbb348-b98a-4379";
 
-void tcpTaskHandler(void* userdata);
+void printTaskHandler(void* userdata);
 void processPacket();
 void printImageFromBuffer();
 
@@ -67,7 +69,7 @@ void setup() {
     }
 
     srv.startServer();
-    xTaskCreatePinnedToCore(tcpTaskHandler, "TCP task", 4096, nullptr, 0, &tcpTask, 1 - xPortGetCoreID());
+    xTaskCreatePinnedToCore(printTaskHandler, "Print task", 4096, nullptr, 0, &printTask, 1 - xPortGetCoreID());
     currImageBuffer = (uint8_t*)malloc(imageBufferSizeLimit);
     Logger::fatalAssert(currImageBuffer != nullptr, "image buffer allocation failed");
     Logger::logMsg(1, "Done");
@@ -168,6 +170,7 @@ void processPacket() {
 
     if(pktIn[0] == 0x07) { // Autoprinting
         if(pktIn[1] == 0x01) { // Clear buffer
+            // for(int i = 0; i < imageBufferRowLimit; i++) imageAvailBuffer[i] = 0;
             currentImageBufferSize = 0;
             pktOut[0] = 0x77;
             pktOut[1] = 0x01;
@@ -179,6 +182,7 @@ void processPacket() {
                 memcpy(&currImageBuffer[currentImageBufferSize * 54], &pktIn[2], 54);
                 currentImageBufferSize++;
             }
+            // while(currentImageBufferSize < imageBufferRowLimit && imageAvailBuffer[currentImageBufferSize]) currentImageBufferSize++;
             pktOut[0] = 0x77;
             pktOut[1] = 0x02;
             return;
@@ -203,18 +207,18 @@ void printImageFromBuffer() {
 }
 
 void loop() {
-    if(srv.receivePacket(pktIn) == 0) {
-        // Logger::logMsg(0, "Received packet");
-        processPacket();
-        if(srv.sendPacket(pktOut) != 0) {
-            Logger::logMsg(3, "Send error");
-        }
-    }
+    srv.pollClients();
+    srv.pollPackets();
 }
 
-void tcpTaskHandler(void* userdata) {
+void printTaskHandler(void* userdata) {
     while(true) {
-        srv.pollClients();
-        srv.pollPackets();
+        if(srv.receivePacket(pktIn) == 0) {
+            // Logger::logMsg(0, "Received packet");
+            processPacket();
+            if(srv.sendPacket(pktOut) != 0) {
+                Logger::logMsg(3, "Send error");
+            }
+        }
     }
 }

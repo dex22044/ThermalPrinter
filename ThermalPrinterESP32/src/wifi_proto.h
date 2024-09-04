@@ -9,6 +9,7 @@ class TCPPrintServer {
 private:
     int serverSock = -1;
     int remoteSock = -1;
+    int udpSock = -1;
     const int pktSize = 64;
     uint8_t* recvBuf;
     uint8_t* sendBuf;
@@ -22,8 +23,9 @@ public:
     void startServer();
     void pollClients();
     void pollPackets();
+    // void pollUDP(uint8_t* lineData, uint8_t* lineAvailData);
     uint16_t queueAvailable();
-    uint16_t txQueueAvailable();
+    // uint16_t txQueueAvailable();
     int receivePacket(uint8_t* output);
     int sendPacket(uint8_t* pkt);
 };
